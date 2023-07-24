@@ -31,48 +31,40 @@ def InternationalEvent(request):
 
 @api_view(['GET'])
 def live_international(request):
-    htmldata = urlopen('https://www.espn.in/cricket/scores')
-    soup = BeautifulSoup(htmldata, 'html.parser')
-    overview= soup.find_all('div',{"class":"cscore_info-overview"})
-    overview_list = []
+    st_r = requests.get("https://www.mykhel.com/cricket/live-scores/")
+    st_soup = BeautifulSoup(st_r.text, 'html.parser')
 
-    for sth in overview:
-        overview_list.append(sth.text)
+    st_headings1 = st_soup.findAll("div",{'class':'os-match-desc-left'})
+    Teams_and_runs = []
+    for sth in st_headings1:
+        Teams_and_runs.append(sth.text)
 
-    header= soup.find_all('div',{"class":"scoreEvent__header"})
-    header_list = []
+    st_headings1 = st_soup.findAll("div",{'class':'os-match-detail'})
+    match_detail = []
+    for sth in st_headings1:
+        match_detail.append(sth.text)
 
-    for sth in header:
-        header_list.append(sth.text)
+    st_headings1 = st_soup.findAll("div",{'class':'os-match-desc-right'})
+    update = []
+    for sth in st_headings1:
+        update.append(sth.text)
 
-    teams= soup.find_all('div',{"class":"cscore_team icon-font-after"})
-    teams_list = []
-
-    for sth in teams:
-        teams_list.append(sth.text)
-
-    result= soup.find_all('span',{"class":"cscore_notes_game"})
-    result_list = []
-
-    for sth in result:
-        result_list.append(sth.text)
-
-    images = soup.find_all('div',{'class':'cscore_logo'})
-    flag_urls = []
-    for image in images:
-        img_tag = image.find('img')
+    i_tags = st_soup.find_all("i")
+    flag_links_list = []
+    for i_tag in i_tags:
+        img_tag = i_tag.find("img")
         if img_tag:
-            flag_url = img_tag['data-src']
-            flag_urls.append(flag_url)
+            flag_link = img_tag.get("src")
+            if flag_link:
+                full_flag_link = "https://www.mykhel.com" + flag_link
+                flag_links_list.append(full_flag_link)
 
 
     diction={
-        'img':flag_urls,
-        'overview':overview_list,
-        # 'header':header_list,
-        'teams&run':teams_list,
-        'result':result_list,
-        #'venue':venue_list,
+        'img':flag_links_list,
+        'overview':match_detail,
+        'teams&run':Teams_and_runs,
+        'result':update,
     }
 
     return JsonResponse({'live':diction},safe=False)
@@ -874,24 +866,60 @@ def MenT20Teams(request):
 #     return Response (parsed_data)
 
 
+# @api_view(['GET'])
+# def scorecard(request):
+#     def get_data(url, api_keys):
+#         headers = {
+#             "X-RapidAPI-Key": api_keys[0],
+#             "X-RapidAPI-Host": "cricbuzz-cricket.p.rapidapi.com"
+#         }
+#         response = requests.get(url, headers=headers)
+#         if response.status_code == 429: # Quota exceeded
+#             api_keys.append(api_keys.pop(0)) # Cycle to next key
+#             headers["X-RapidAPI-Key"] = api_keys[0]
+#             response = requests.get(url, headers=headers)
+#         return response.json()
+
+#     api_keys = ["08341a5204mshbec004e335e3ed3p1ed96bjsn69e646d19029",
+#                 "87ed0357acmsh559e7b0badab14fp1cd6aajsn0c83b2e243db"]
+#     url = "https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/40381/scard"
+
+#     data = get_data(url, api_keys)
+
+#     return Response(data)
+
+
 @api_view(['GET'])
 def scorecard(request):
-    def get_data(url, api_keys):
-        headers = {
-            "X-RapidAPI-Key": api_keys[0],
-            "X-RapidAPI-Host": "cricbuzz-cricket.p.rapidapi.com"
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code == 429: # Quota exceeded
-            api_keys.append(api_keys.pop(0)) # Cycle to next key
-            headers["X-RapidAPI-Key"] = api_keys[0]
-            response = requests.get(url, headers=headers)
-        return response.json()
+    url = "https://www.mykhel.com/cricket/live-scores/"
 
-    api_keys = ["08341a5204mshbec004e335e3ed3p1ed96bjsn69e646d19029",
-                "87ed0357acmsh559e7b0badab14fp1cd6aajsn0c83b2e243db"]
-    url = "https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/40381/scard"
+    # Send an HTTP request to the URL and get the page content
+    response = requests.get(url)
 
-    data = get_data(url, api_keys)
+    # Parse the page content using BeautifulSoup
+    soup = BeautifulSoup(response.content, "html.parser")
 
-    return Response(data)
+    # Find all the "a" tags in the parsed HTML
+    a_tags = soup.find_all("a")
+
+    # Create an empty list to store the links that meet the specified condition
+    filtered_links = []
+
+    # Loop through the "a" tags and add the links with the specified condition to the list
+    for a_tag in a_tags:
+        link = a_tag.get("href")
+        if link and "-live-score-" in link:
+            filtered_links.append("https://www.mykhel.com" + link)
+
+    # Create an empty list to store the data from each match
+    match_details_list = []
+
+    # Loop through the filtered_links list to visit each link and store the data from the "div" with class "os-match-detail"
+    for link in filtered_links:
+        response = requests.get(link)
+        soup = BeautifulSoup(response.content, "html.parser")
+        match_detail_div = soup.find("div", {'class': 'os-c-ln-main-lt os-lt'})
+        
+        if match_detail_div:
+            match_details_list.append(match_detail_div.text.strip())
+    return Response(match_details_list)
