@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'manual_news',
     'role',
     'subscription',
+    'contact',
 
 ]
 

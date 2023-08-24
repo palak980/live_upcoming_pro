@@ -30,6 +30,7 @@ urlpatterns = [
     path('manual_news/', include('manual_news.urls')),
     path('role/', include('role.urls')),
     path('subscription/', include('subscription.urls')),
+    path('contact/', include('contact.urls'))
 
 
     

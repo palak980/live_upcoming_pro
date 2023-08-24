@@ -5,66 +5,79 @@ import json, requests
 from cleantext import clean
 from rest_framework.response import Response
 from urllib.request import urlopen
+import re
+import pandas as pd
 
 @api_view(['GET'])
 def InternationalEvent(request):
-    st_r = requests.get("https://www.mykhel.com/cricket/schedule/")
+    st_r = requests.get("https://sports.ndtv.com/cricket/teams/6-india-teamprofile/schedules-fixtures")
     st_soup = BeautifulSoup(st_r.text, 'html.parser')
-    st_headings1 = st_soup.findAll("td", {"class":"os-textleft"})
+    st_headings1 = st_soup.findAll("div", {"class":"scr_txt-ony"})
 
     dates_event = []
 
     for sth in st_headings1:
         dates_event.append(sth.text)
-        part1 = dates_event[0::3]
+        
+    st_headings2 = st_soup.findAll("div",{'class':'scr_dt-red'})
+    date1 = []
+    for sth in st_headings2:
+        date1.append(sth.text)
 
-        # Extracting second part
-        part2 = dates_event[1::3]
+    st_headings3 = st_soup.findAll("div",{'class':'scr_tm-wrp'})
+    date = []
+    for sth in st_headings3:
+        date.append(sth.text)
 
-        # Extracting third part
-        part3 = dates_event[2::3]
+        dic={'date_venue_event':dates_event,'team':date,'time':date1}
 
-        dic={'date_time_event':part1,'team':part2,'venue':part3}
-
-    return JsonResponse(dic, safe=False) 
+    return JsonResponse({'dict':dic}, safe=False) 
 
 
 @api_view(['GET'])
 def live_international(request):
-    st_r = requests.get("https://www.mykhel.com/cricket/live-scores/")
+    st_r = requests.get("https://www.icc-cricket.com/live-cricket/mens-results")
     st_soup = BeautifulSoup(st_r.text, 'html.parser')
 
-    st_headings1 = st_soup.findAll("div",{'class':'os-match-desc-left'})
+    st_headings1 = st_soup.findAll("div",{'class':'match-block__summary'})
+    overview = []
+    for sth in st_headings1:
+        overview.append(sth.text)
+    cleaned_data1 = [item for item in overview if item.strip()]
+
+    st_headings2 = st_soup.findAll("div",{'class':'match-block__team-content'})
     Teams_and_runs = []
-    for sth in st_headings1:
+    for sth in st_headings2:
         Teams_and_runs.append(sth.text)
+    cleaned_data = [item.replace('\n', '').strip() for item in Teams_and_runs if item.strip()]
+    cleaned_data2 = [re.sub(r'\s+', ' ', item.strip()) for item in cleaned_data]
 
-    st_headings1 = st_soup.findAll("div",{'class':'os-match-detail'})
-    match_detail = []
-    for sth in st_headings1:
-        match_detail.append(sth.text)
+    st_headings3 = st_soup.findAll("div",{'class':'match-block__result'})
+    date1 = []
+    for sth in st_headings3:
+        date1.append(sth.text)
 
-    st_headings1 = st_soup.findAll("div",{'class':'os-match-desc-right'})
-    update = []
-    for sth in st_headings1:
-        update.append(sth.text)
+    st_headings4 = st_soup.findAll("div",{'class':'match-block__meta-container-content'})
+    date = []
+    for sth in st_headings4:
+        date.append(sth.text)
 
-    i_tags = st_soup.find_all("i")
-    flag_links_list = []
-    for i_tag in i_tags:
-        img_tag = i_tag.find("img")
-        if img_tag:
-            flag_link = img_tag.get("src")
-            if flag_link:
-                full_flag_link = "https://www.mykhel.com" + flag_link
-                flag_links_list.append(full_flag_link)
+    # i_tags = st_soup.find_all("i")
+    # flag_links_list = []
+    # for i_tag in i_tags:
+    #     img_tag = i_tag.find("img")
+    #     if img_tag:
+    #         flag_link = img_tag.get("src")
+    #         if flag_link:
+    #             full_flag_link = "https://www.mykhel.com" + flag_link
+    #             flag_links_list.append(full_flag_link)
 
 
     diction={
-        'img':flag_links_list,
-        'overview':match_detail,
-        'teams&run':Teams_and_runs,
-        'result':update,
+        'date':date,
+        'overview':cleaned_data1,
+        'teams&run':cleaned_data2,
+        'result':date1,
     }
 
     return JsonResponse({'live':diction},safe=False)
@@ -74,253 +87,209 @@ def live_international(request):
 @api_view(['GET'])
 def NewsView6(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/batting")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings9 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = "https://www.crictracker.com/icc-rankings/batting-test/"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    st_headings9 = st_headings9[:10]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news9 = []
+    data_list = []
 
-    for sth in st_headings9:
-        st_news9.append(sth.text)
-        tit_list=(clean(text=st_news9,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list}, safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 @api_view(['GET'])
 def NewsView7(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/batting")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings10 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/batting-odi/")
+  
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings10 = st_headings10[10:20]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news10 = []
+    data_list = []
 
-    for sth in st_headings10:
-        st_news10.append(sth.text)
-        tit_list=(clean(text=st_news10,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 
 @api_view(['GET'])
 def NewsView8(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/batting")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings11 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/batting-t20i/")
+    
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings11 = st_headings11[20:30]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news11 = []
+    data_list = []
 
-    for sth in st_headings11:
-        st_news11.append(sth.text)
-        tit_list=(clean(text=st_news11,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 
 @api_view(['GET'])
 def NewsView9(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/bowling")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings12 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/bowling-test/")
+  
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings12 = st_headings12[:10]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news12 = []
+    data_list = []
 
-    for sth in st_headings12:
-        st_news12.append(sth.text)
-        tit_list=(clean(text=st_news12,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 
 @api_view(['GET'])
 def NewsView10(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/bowling")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings13 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/bowling-odi/")
 
-    st_headings13 = st_headings13[10:20]
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_news13 = []
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    for sth in st_headings13:
-        st_news13.append(sth.text)
-        tit_list=(clean(text=st_news13,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    data_list = []
 
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
+
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 
 @api_view(['GET'])
 def NewsView11(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/bowling")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings14 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/bowling-t20i/")
+   
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings14 = st_headings14[20:30]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news14 = []
+    data_list = []
 
-    for sth in st_headings14:
-        st_news14.append(sth.text)
-        tit_list=(clean(text=st_news14,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 #allrounders
@@ -328,126 +297,104 @@ def NewsView11(request):
 @api_view(['GET'])
 def NewsView12(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/all-rounder")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings15 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/all-rounder-test/")
+   
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings15 = st_headings15[:10]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news15 = []
+    data_list = []
 
-    for sth in st_headings15:
-        st_news15.append(sth.text)
-        tit_list=(clean(text=st_news15,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 @api_view(['GET'])
 def NewsView13(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/all-rounder")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings16 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/all-rounder-odi/")
 
-    st_headings16 = st_headings16[10:20]
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_news16 = []
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    for sth in st_headings16:
-        st_news16.append(sth.text)
-        tit_list=(clean(text=st_news16,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    data_list = []
 
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
+
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 
 @api_view(['GET'])
 def NewsView14(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/men/all-rounder")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings17 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/all-rounder-t20i/")
+   
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings17 = st_headings17[20:30]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news17 = []
+    data_list = []
 
-    for sth in st_headings17:
-        st_news17.append(sth.text)
-        tit_list=(clean(text=st_news17,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 #Women
@@ -455,247 +402,205 @@ def NewsView14(request):
 @api_view(['GET'])
 def WomenODIbat(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/women/batting")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings21 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/women/batting-odi/")
+    
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings21 = st_headings21[:10]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news21 = []
+    data_list = []
 
-    for sth in st_headings21:
-        st_news21.append(sth.text)
-        tit_list=(clean(text=st_news21,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse(
-        {"news from times of india":tit_list},
-        safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 @api_view(['GET'])
 def WomenODIbowler(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/women/bowling")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings22 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/women/bowling-odi/")
+  
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings22 = st_headings22[:10]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news22 = []
+    data_list = []
 
-    for sth in st_headings22:
-        st_news22.append(sth.text)
-        tit_list=(clean(text=st_news22,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 
 @api_view(['GET'])
 def WomenODIAllrounder(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/women/all-rounder")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings22 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/women/all-rounder-odi/")
+    
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings22 = st_headings22[:10]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news22 = []
+    data_list = []
 
-    for sth in st_headings22:
-        st_news22.append(sth.text)
-        
-    return JsonResponse({"news from times of india":clean(text=st_news22,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                )},safe=False)    
+    rows = table.find_all('tr')[1:]  # Exclude the header row
+
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
+
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)   
 
 
 @api_view(['GET'])
 def WomenT20Bat(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/women/batting")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings22 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    response = requests.get("https://www.crictracker.com/icc-rankings/women/batting-t20i/")
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    st_headings22 = st_headings22[10:20]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news22 = []
+    data_list = []
 
-    for sth in st_headings22:
-        st_news22.append(sth.text)
-        tit_list=(clean(text=st_news22,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india": json_data}, safe=False)
 
 
 @api_view(['GET'])
 def WomenT20Bowler(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/women/bowling")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings22 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/women/bowling-t20i/")
+    
+    soup = BeautifulSoup(url.text, 'html.parser')
 
-    st_headings22 = st_headings22[10:20]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news22 = []
+    data_list = []
 
-    for sth in st_headings22:
-        st_news22.append(sth.text)
-        tit_list=(clean(text=st_news22,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 @api_view(['GET'])
 def WomenT20Allrounder(request):
 
-    st_r = requests.get("https://www.cricbuzz.com/cricket-stats/icc-rankings/women/all-rounder")
-    st_soup = BeautifulSoup(st_r.text, 'lxml')
-    st_headings22 = st_soup.findAll("div", {"class":"cb-col cb-col-100 cb-font-14 cb-lst-itm text-center"})
+    url = requests.get("https://www.crictracker.com/icc-rankings/women/all-rounder-t20i/")
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    st_headings22 = st_headings22[10:20]
+    table = soup.find('table', class_='numbered undefined undefined text-center font-semi text-nowrap table')
 
-    st_news22 = []
+    data_list = []
 
-    for sth in st_headings22:
-        st_news22.append(sth.text)
-        tit_list=(clean(text=st_news22,
-                fix_unicode=True,
-                to_ascii=True,
-                lower=True,
-                no_line_breaks=True,
-                no_urls=False,
-                no_emails=False,
-                no_phone_numbers=False,
-                no_numbers=False,
-                no_digits=False,
-                no_currency_symbols=False,
-                no_punct=False,
-                replace_with_punct="",
-                replace_with_url="This is a URL",
-                replace_with_email="Email",
-                #replace_with_phone_number="",
-                replace_with_number="123",
-                replace_with_digit="0",
-                replace_with_currency_symbol="$",
-                lang="en"
-                ))
-        tit_list = tit_list.strip('[]').split(', ')
-        tit_list = [d.strip("'") for d in tit_list]
+    rows = table.find_all('tr')[1:]  # Exclude the header row
 
+    for row in rows:
+        columns = row.find_all('td')
+        if len(columns) >= 4:
+            player_rank = columns[0].get_text(strip=True)
+            player_name = columns[1].get_text(strip=True)
+            player_team = columns[2].get_text(strip=True)
+            player_rating = columns[3].get_text(strip=True)
+            
+            player_data = {
+                'Rank': player_rank,
+                'Name': player_name,
+                'Team': player_team,
+                'Rating': player_rating
+            }
+            data_list.append(player_data)
 
-    return JsonResponse({"news from times of india":tit_list},safe=False)
+    # Convert the data_list into JSON format
+    json_data = json.dumps(data_list)
+    return JsonResponse({"news from times of india":json_data}, safe=False)
 
 
 @api_view(['GET'])
@@ -747,100 +652,82 @@ def WomenODITeams(request):
 
 #MenTEamRanking
 
+def scrape_icc_rankings(url):
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch the page. Error code: {response.status_code}")
+
+    soup = BeautifulSoup(response.content, "html.parser")
+    table = soup.find("table")
+
+    headers = [th.text.strip() for th in table.find_all("th")]
+    rows = []
+    for tr in table.find_all("tr"):
+        row = [td.text.strip() for td in tr.find_all(["td", "a"])]
+        rows.append(row)
+
+    data = [dict(zip(headers, row)) for row in rows[1:]]  # Skip the header row
+    return data
+
 @api_view(['GET'])
 def MenTestTeams(request):
+    url = "https://www.crictracker.com/icc-rankings/teams-test/"
+    icc_rankings_data = scrape_icc_rankings(url)
+    icc_rankings_json = json.dumps(icc_rankings_data, indent=4)
 
-    url = 'https://www.mykhel.com/cricket/icc-test-rankings/'
+    return JsonResponse({'data': icc_rankings_json}, safe=False)
+
+
+def scrape_icc_rankings(url):
     response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch the page. Error code: {response.status_code}")
 
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(response.content, "html.parser")
+    table = soup.find("table")
 
-    # Find the table containing the data
-    table = soup.find('table')
-    tbody = table.find('tbody')
+    headers = [th.text.strip() for th in table.find_all("th")]
+    rows = []
+    for tr in table.find_all("tr"):
+        row = [td.text.strip() for td in tr.find_all(["td", "a"])]
+        rows.append(row)
 
-    # Extract the table headers
-    headers = [header.text for header in tbody.find_all('th')]
-
-    # Extract the table rows
-    rows = tbody.find_all('tr')
-    data = []
-
-    # Iterate over the rows and extract the values for each column
-    for row in rows:
-        values = [value.text for value in row.find_all('td')]
-        data.append(dict(zip(headers, values)))
-
-    # Convert the data to JSON format
-    json_data = json.dumps(data, indent=4)
-
-
-    return Response({"news from times of india":json_data})
-
+    data = [dict(zip(headers, row)) for row in rows[1:]]  # Skip the header row
+    return data
 
 @api_view(['GET'])
 def MenODITeams(request):
+    url = "https://www.crictracker.com/icc-rankings/teams-odi/"
+    icc_rankings_data = scrape_icc_rankings(url)
+    icc_rankings_json = json.dumps(icc_rankings_data, indent=4)
 
-    url = 'https://www.mykhel.com/cricket/icc-odi-rankings/'
+    return Response(icc_rankings_json)
+
+
+def scrape_icc_rankings(url):
     response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch the page. Error code: {response.status_code}")
 
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(response.content, "html.parser")
+    table = soup.find("table")
 
-    # Find the table containing the data
-    table = soup.find('table')
-    tbody = table.find('tbody')
+    headers = [th.text.strip() for th in table.find_all("th")]
+    rows = []
+    for tr in table.find_all("tr"):
+        row = [td.text.strip() for td in tr.find_all(["td", "a"])]
+        rows.append(row)
 
-    # Extract the table headers
-    headers = [header.text for header in tbody.find_all('th')]
-
-    # Extract the table rows
-    rows = tbody.find_all('tr')
-    data = []
-
-    # Iterate over the rows and extract the values for each column
-    for row in rows:
-        values = [value.text for value in row.find_all('td')]
-        data.append(dict(zip(headers, values)))
-
-    # Convert the data to JSON format
-    json_data = json.dumps(data, indent=4)
-
-
-    return JsonResponse({"news from times of india":json_data},safe=False)
-
+    data = [dict(zip(headers, row)) for row in rows[1:]]  # Skip the header row
+    return data
 
 @api_view(['GET'])
 def MenT20Teams(request):
+    url = "https://www.crictracker.com/icc-rankings/teams-t20i/"
+    icc_rankings_data = scrape_icc_rankings(url)
+    icc_rankings_json = json.dumps(icc_rankings_data, indent=4)
 
-    url = 'https://www.mykhel.com/cricket/icc-t20-rankings/'
-    response = requests.get(url)
-
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
-
-    # Find the table containing the data
-    table = soup.find('table')
-    tbody = table.find('tbody')
-
-    # Extract the table headers
-    headers = [header.text for header in tbody.find_all('th')]
-
-    # Extract the table rows
-    rows = tbody.find_all('tr')
-    data = []
-
-    # Iterate over the rows and extract the values for each column
-    for row in rows:
-        values = [value.text for value in row.find_all('td')]
-        data.append(dict(zip(headers, values)))
-
-    # Convert the data to JSON format
-    json_data = json.dumps(data, indent=4)
-
-
-    return JsonResponse({"news from times of india":json_data},safe=False)
+    return Response(icc_rankings_json)
 
 
 # @api_view(['GET'])
@@ -891,35 +778,44 @@ def MenT20Teams(request):
 
 @api_view(['GET'])
 def scorecard(request):
-    url = "https://www.mykhel.com/cricket/live-scores/"
-
-    # Send an HTTP request to the URL and get the page content
+    url = "https://www.icc-cricket.com/live-cricket/mens-results"
     response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
 
-    # Parse the page content using BeautifulSoup
-    soup = BeautifulSoup(response.content, "html.parser")
+    match_buttons = soup.find_all("div", class_="match-block__buttons")
 
-    # Find all the "a" tags in the parsed HTML
-    a_tags = soup.find_all("a")
+    match_center_links = []
+    for match_button in match_buttons:
+        link_element = match_button.find("a", class_="btn")
+        if link_element and link_element.get("href"):
+            match_center_links.append("https://www.icc-cricket.com" + link_element.get("href"))
 
-    # Create an empty list to store the links that meet the specified condition
-    filtered_links = []
+    all_matches_data = []
 
-    # Loop through the "a" tags and add the links with the specified condition to the list
-    for a_tag in a_tags:
-        link = a_tag.get("href")
-        if link and "-live-score-" in link:
-            filtered_links.append("https://www.mykhel.com" + link)
-
-    # Create an empty list to store the data from each match
-    match_details_list = []
-
-    # Loop through the filtered_links list to visit each link and store the data from the "div" with class "os-match-detail"
-    for link in filtered_links:
+    for link in match_center_links:
         response = requests.get(link)
-        soup = BeautifulSoup(response.content, "html.parser")
-        match_detail_div = soup.find("div", {'class': 'os-c-ln-main-lt os-lt'})
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Find all scorecard tables on the page
+        scorecard_tables = soup.find_all('table', {'class': 'table'})
+
+        match_data = []
+
+        # Iterate through each scorecard table
+        for table in scorecard_tables:
+            headers = [th.get_text(strip=True) for th in table.find_all('th')]
+
+            rows = []
+            for row in table.find_all('tr')[1:]:
+                row_data = [td.get_text(strip=True, separator='\n') for td in row.find_all(['td', 'th'])]
+                rows.append(row_data)
+
+            df = pd.DataFrame(rows, columns=headers)
+
+            # Convert DataFrame to JSON
+            df_json = df.to_dict(orient='records')
+            match_data.append(df_json)
         
-        if match_detail_div:
-            match_details_list.append(match_detail_div.text.strip())
-    return Response(match_details_list)
+        all_matches_data.append(match_data)
+
+    return Response(all_matches_data)
