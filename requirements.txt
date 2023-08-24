@@ -51,3 +51,4 @@ urllib3==1.26.15
 validators==0.20.0
 wcwidth==0.2.6
 win32-setctime==1.1.0
+waitress==2.1.2
