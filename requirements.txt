@@ -19,6 +19,7 @@ djangorestframework==3.13.1
 dynaconf==3.1.12
 emoji==1.7.0
 ftfy==6.1.1
+gunicorn==21.2.0
 hvac==1.1.0
 idna==3.4
 Jinja2==3.1.2
@@ -30,6 +31,7 @@ lxml==4.9.2
 MarkupSafe==2.1.2
 nltk==3.8.1
 numpy==1.25.2
+packaging==23.1
 pandas==2.0.3
 Pillow==9.5.0
 pycparser==2.21
@@ -51,4 +53,3 @@ urllib3==1.26.15
 validators==0.20.0
 wcwidth==0.2.6
 win32-setctime==1.1.0
-waitress==2.1.2
