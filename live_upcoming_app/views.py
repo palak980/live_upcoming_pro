@@ -10,26 +10,34 @@ import pandas as pd
 
 @api_view(['GET'])
 def InternationalEvent(request):
-    st_r = requests.get("https://sports.ndtv.com/cricket/teams/6-india-teamprofile/schedules-fixtures")
+    st_r = requests.get("https://www.indiacricketschedule.com/2018/12/upcoming-india-cricket-schedule-t20-odi-test-matches-fixtures.html")
     st_soup = BeautifulSoup(st_r.text, 'html.parser')
-    st_headings1 = st_soup.findAll("div", {"class":"scr_txt-ony"})
-
-    dates_event = []
-
+    st_headings1 = st_soup.findAll("span",{'class':'series-h2'})
+    event = []
     for sth in st_headings1:
-        dates_event.append(sth.text)
+        event.append(sth.text)
         
-    st_headings2 = st_soup.findAll("div",{'class':'scr_dt-red'})
-    date1 = []
+    st_headings2 = st_soup.findAll("span",{'class':'match-venue'})
+    venue = []
     for sth in st_headings2:
-        date1.append(sth.text)
+        venue.append(sth.text)
 
-    st_headings3 = st_soup.findAll("div",{'class':'scr_tm-wrp'})
-    date = []
+    st_headings3 = st_soup.findAll("div",{'class':'match-time'})
+    time = []
     for sth in st_headings3:
+        time.append(sth.text)
+
+    st_headings4 = st_soup.findAll("abbr",{'class':'dtstart'})
+    date = []
+    for sth in st_headings4:
         date.append(sth.text)
 
-        dic={'date_venue_event':dates_event,'team':date,'time':date1}
+    st_headings5 = st_soup.findAll("span",{'class':'summary'})
+    summery = []
+    for sth in st_headings5:
+        summery.append(sth.text)
+
+        dic={'date_venue_event':venue,'team':summery,'time':time, 'event':event, 'date':date}
 
     return JsonResponse({'dict':dic}, safe=False) 
 
