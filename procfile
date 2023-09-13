@@ -1,1 +1,5 @@
 web: gunicorn 'live_upcoming_pro.wsgi'
+release: python manage.py migrate
+release: python manage.py collectstatic --noinput
+dev: python manage.py makemigrations
+# dev: python manage.py runserver 0.0.0.0:8000

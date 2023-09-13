@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-b^6n1he!!-*)3ovc0*(+#3+*#qw5s8%7v$2@avkyd+cgkp141#'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'role',
     'subscription',
     'contact',
+    'storages'
 
 ]
 
@@ -167,7 +168,7 @@ EMAIL_USE_TLS=True
 AWS_ACCESS_KEY_ID = 'AKIAT2OAXQVZR3ZVZX57 '
 AWS_SECRET_ACCESS_KEY = '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'
 AWS_STORAGE_BUCKET_NAME = 'cbackend'
-AWS_S3_SIGNATURE_NAME = 's3v4',
+AWS_S3_SIGNATURE_NAME = 's3v4'
 AWS_S3_REGION_NAME = 'ap-south-1'
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL =  None
