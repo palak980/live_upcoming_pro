@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'role',
     'subscription',
     'contact',
-    'storages'
+    # 'storages'
 
 ]
 
