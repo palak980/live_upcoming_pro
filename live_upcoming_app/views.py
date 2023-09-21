@@ -10,37 +10,48 @@ import pandas as pd
 
 @api_view(['GET'])
 def InternationalEvent(request):
-    st_r = requests.get("https://www.indiacricketschedule.com/2018/12/upcoming-india-cricket-schedule-t20-odi-test-matches-fixtures.html")
+    st_r = requests.get("https://www.icc-cricket.com/mens-schedule/list")
     st_soup = BeautifulSoup(st_r.text, 'html.parser')
-    st_headings1 = st_soup.findAll("span",{'class':'series-h2'})
-    event = []
-    for sth in st_headings1:
-        event.append(sth.text)
-        
-    st_headings2 = st_soup.findAll("span",{'class':'match-venue'})
-    venue = []
-    for sth in st_headings2:
-        venue.append(sth.text)
 
-    st_headings3 = st_soup.findAll("div",{'class':'match-time'})
+    st_headings1 = st_soup.findAll("div",{'class':'match-block__team'})
+    team1 = []
+    for sth in st_headings1:
+        team1.append(sth.text)
+        
+    st_headings2 = st_soup.findAll("div",{'class':'match-block__summary'})
+    summery = []
+    for sth in st_headings2:
+        summery.append(sth.text)
+
+    st_headings3 = st_soup.findAll("time",{'class':'match-block__date match-block__date--local'})
     time = []
     for sth in st_headings3:
         time.append(sth.text)
 
-    st_headings4 = st_soup.findAll("abbr",{'class':'dtstart'})
-    date = []
-    for sth in st_headings4:
-        date.append(sth.text)
+    
 
-    st_headings5 = st_soup.findAll("span",{'class':'summary'})
-    summery = []
-    for sth in st_headings5:
-        summery.append(sth.text)
-
-        dic={'date_venue_event':venue,'team':summery,'time':time, 'event':event, 'date':date}
+        dic={'summery':summery,'team':team1,'time':time}
 
     return JsonResponse({'dict':dic}, safe=False) 
 
+@api_view(['GET'])
+def Live_match(request):
+    st_r = requests.get("https://www.espncricinfo.com/live-cricket-score")
+    st_soup = BeautifulSoup(st_r.text, 'html.parser')
+    
+    st_headings1 = st_soup.findAll("div",{'class':'ds-text-tight-xs ds-truncate ds-text-typo-mid3'})
+    team1 = []
+    for sth in st_headings1:
+        team1.append(sth.text)
+        
+    st_headings2 = st_soup.findAll("div",{'class':'ci-team-score ds-flex ds-justify-between ds-items-center ds-text-typo ds-my-1'})
+    summery = []
+    for sth in st_headings2:
+        summery.append(sth.text)
+
+        dic={'summery':summery,'team':team1}
+
+    return JsonResponse({'dict':dic}, safe=False) 
 
 @api_view(['GET'])
 def live_international(request):

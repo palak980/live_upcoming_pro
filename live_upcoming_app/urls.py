@@ -6,6 +6,7 @@ urlpatterns=[
 # Events&LiveMatch
     path('InternetionalEvent/', views.InternationalEvent, name='InternetionalEvent'),
     path('Live_Interntonal/', views.live_international, name='Live_Interntonal'),
+    path('Live_match/', views.Live_match, name='Live_match'),
 
 # MensRanking
     path('BatMenTestRanking/', views.NewsView6, name='BatMenTestRanking'),
