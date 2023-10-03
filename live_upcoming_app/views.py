@@ -27,9 +27,6 @@ def InternationalEvent(request):
     time = []
     for sth in st_headings3:
         time.append(sth.text)
-
-    
-
         dic={'summery':summery,'team':team1,'time':time}
 
     return JsonResponse({'dict':dic}, safe=False) 
