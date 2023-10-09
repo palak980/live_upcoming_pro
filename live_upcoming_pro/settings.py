@@ -100,11 +100,11 @@ WSGI_APPLICATION = 'live_upcoming_pro.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': '89vsvSeaKFlf1wcrrc8D',
-        'HOST': 'containers-us-west-46.railway.app',
-        'PORT': '6427',
+        'NAME': 'crickdata',
+        'USER': 'cd1',
+        'PASSWORD': 'Cricktic123@',
+        'HOST': '103.209.146.151',
+        'PORT': '5432',
     }
 }
 

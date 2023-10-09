@@ -10,24 +10,26 @@ import pandas as pd
 
 @api_view(['GET'])
 def InternationalEvent(request):
-    st_r = requests.get("https://www.icc-cricket.com/mens-schedule/list")
+    st_r = requests.get("https://sports.ndtv.com/cricket/teams/6-india-teamprofile/schedules-fixtures")
     st_soup = BeautifulSoup(st_r.text, 'html.parser')
+    st_headings1 = st_soup.findAll("div", {"class":"scr_txt-ony"})
 
-    st_headings1 = st_soup.findAll("div",{'class':'match-block__team'})
-    team1 = []
+    dates_event = []
+
     for sth in st_headings1:
-        team1.append(sth.text)
+        dates_event.append(sth.text)
         
-    st_headings2 = st_soup.findAll("div",{'class':'match-block__summary'})
-    summery = []
+    st_headings2 = st_soup.findAll("div",{'class':'scr_dt-red'})
+    date1 = []
     for sth in st_headings2:
-        summery.append(sth.text)
+        date1.append(sth.text)
 
-    st_headings3 = st_soup.findAll("time",{'class':'match-block__date match-block__date--local'})
-    time = []
+    st_headings3 = st_soup.findAll("div",{'class':'scr_tm-wrp'})
+    date = []
     for sth in st_headings3:
-        time.append(sth.text)
-        dic={'summery':summery,'team':team1,'time':time}
+        date.append(sth.text)
+
+        dic={'date_venue_event':dates_event,'team':date,'time':date1}
 
     return JsonResponse({'dict':dic}, safe=False) 
 
@@ -97,6 +99,7 @@ def live_international(request):
     }
 
     return JsonResponse({'live':diction},safe=False)
+    
     
 
 
